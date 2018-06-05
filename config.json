@@ -2,15 +2,15 @@
   "environment": "live",
   "debug": false,
   "Captcha": {
-    "secret": ""
+    "secret": "6LfZn1wUAAAAANXeJhASZuPrUCpUqUEP4TsgS7ss"
   },
   "Ethereum": {
-    "milliEtherToTransfer": 500,
-    "gasLimit": "21000",
+    "EtherToTransfer": "5",
+    "gasLimit": "42000",
     "live": {
-      "rpc": "http://127.0.0.1:8545",
-      "account": "",
-      "privateKey": ""
+      "rpc": "http://127.0.0.1:9545",
+      "account": "0x7b930d88efaa1bee91de7596d54e88a0577553c4",
+      "privateKey": "a54d05e43bc25fd2e904008abd96e4a39ff498e203fc0a9300c639bcabb50b21"
     }
   }
 }
