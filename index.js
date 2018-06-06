@@ -20,8 +20,13 @@ if (configExists) config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 app.config = config;
 
 app.use(express.static(__dirname + '/public'));
-app.use(bodyParser.json({limit: '50mb'}));
-app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+app.use(bodyParser.json({
+  limit: '50mb'
+}));
+app.use(bodyParser.urlencoded({
+  limit: '50mb',
+  extended: true
+}));
 
 require('./helpers/debug')(app);
 require('./helpers/generateResponse')(app);
@@ -30,13 +35,12 @@ require('./helpers/blockchainHelper')(app);
 require('./helpers/captchaHelper')(app);
 require('./controllers/index')(app);
 
-app.get('/', function(request, response) {
+app.get('/', function (request, response) {
   response.send('EtherSocialNetwork faucet');
 });
 
 app.set('port', (process.env.PORT || 3001));
 
 app.listen(app.get('port'), function () {
-    console.log('EtherSocialNetwork faucet is running on port', app.get('port'));
+  console.log('EtherSocialNetwork faucet is running on port', app.get('port'));
 });
-

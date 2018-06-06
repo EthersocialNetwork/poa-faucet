@@ -6,8 +6,8 @@ module.exports = function (app) {
 	var validateCaptcha = app.validateCaptcha;
 
 	app.post('/', async function (request, response) {
-		console.log("REQUEST:")
-		console.log(request.body)
+		console.log("REQUEST:");
+		console.log(request.body);
 		var recaptureResponse = request.body["g-recaptcha-response"];
 		//console.log("recaptureResponse: ", recaptureResponse)
 		if (!recaptureResponse) return generateErrorResponse(response, {

@@ -20,17 +20,16 @@
   top: 50%;
   width: 206px;
   margin: -30px 0 0 -111.5px;
-  padding-top: 50px;
+  padding-top: 180px;
 
   &:before {
-    @include image-2x('../images/loading@2x.png');
     content: '';
     position: absolute;
     left: 0;
     top: 0;
     width: 206px;
-    height: 35px;
-    background-image: url("../images/loading.png");
+    height: 175px;
+    background-image: url("../images/loading.gif");
     background-position: 0 0;
   }
 

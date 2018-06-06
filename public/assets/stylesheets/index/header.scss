@@ -4,10 +4,9 @@
   z-index: 1;
   top: 0;
   padding: 18px 10px;
-  background-image: url(../images/bg_header.png);
+  background-image: linear-gradient(to right, rgb(51, 243, 202) 0%, rgb(117, 186, 255) 50%, rgb(181, 145, 255) 100%);
   background-repeat: no-repeat;
   background-size: cover;
-
   &-settings {
     float: right;
     text-transform: uppercase;
@@ -18,16 +17,14 @@
     font-size: 13px;
     font-weight: bold;
   }
-
   &-logo {
     @include image-2x('../images/faucet_top@2x.png', 182px, 35px);
     float: left;
     width: 182px;
-  	height: 35px;
+    height: 35px;
     background-image: url(../images/faucet_top.png);
     background-position: 0 0;
   }
-
   &-new-ballot {
     @extend %btn;
     @extend %btn-new;
