@@ -2,3 +2,6 @@
 node_modules/
 public/assets/javascripts/application.js
 public/stylesheets/application.css
+/*.bak
+/package-lock.json
+/public/package-lock.json
