@@ -1,13 +1,13 @@
 module.exports = function (app) {
-	var EthereumTx = app.EthereumTx;
 	var generateErrorResponse = app.generateErrorResponse;
 	var config = app.config;
-	var configureWeb3 = app.configureWeb3;
 	var validateCaptcha = app.validateCaptcha;
+	const Web3 = require('web3');
+	const Tx = require('ethereumjs-tx')
+	const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:9545"));
+	let cntCheck = 0;
 
 	app.post('/', async function (request, response) {
-		console.log("REQUEST:");
-		console.log(request.body);
 		var recaptureResponse = request.body["g-recaptcha-response"];
 		//console.log("recaptureResponse: ", recaptureResponse)
 		if (!recaptureResponse) return generateErrorResponse(response, {
@@ -17,7 +17,7 @@ module.exports = function (app) {
 		});
 
 		var receiver = request.body.receiver;
-		let out;
+		var out;
 		try {
 			out = await validateCaptcha(recaptureResponse);
 		} catch (e) {
@@ -26,23 +26,17 @@ module.exports = function (app) {
 		await validateCaptchaResponse(out, receiver, response);
 	});
 
-	app.get('/health', async function (request, response) {
-		let web3;
-		try {
-			web3 = await configureWeb3(config);
-		} catch (e) {
-			return generateErrorResponse(response, e);
-		}
-		let resp = {};
+	app.get('/health', function (request, response) {
+		var resp = {};
 		resp.address = config.Ethereum.live.account;
-		let balanceInWei = await web3.eth.getBalance(resp.address);
-		let balanceInEth = await web3.utils.fromWei(balanceInWei, "ether");
+		var balanceInWei = web3.eth.getBalance(resp.address);
+		var balanceInEth = web3.fromWei(balanceInWei, "ether");
 		resp.balanceInWei = balanceInWei;
 		resp.balanceInEth = Math.round(balanceInEth);
 		response.send(resp);
 	});
 
-	async function validateCaptchaResponse(out, receiver, response) {
+	function validateCaptchaResponse(out, receiver, response) {
 		if (!out) return generateErrorResponse(response, {
 			code: 500,
 			title: "Error",
@@ -53,74 +47,82 @@ module.exports = function (app) {
 			title: "Error",
 			message: "Invalid captcha"
 		});
-
-		let web3;
-		try {
-			web3 = await configureWeb3(config);
-		} catch (e) {
-			return generateErrorResponse(response, e);
-		}
-		await sendPOAToRecipient(web3, receiver, response);
+		sendPOAToRecipient(receiver, response);
 	}
 
-	async function sendPOAToRecipient(web3, receiver, response) {
-		let senderPrivateKey = config.Ethereum[config.environment].privateKey;
-		const privateKeyHex = Buffer.from(senderPrivateKey, 'hex');
-		if (!web3.utils.isAddress(receiver)) return generateErrorResponse(response, {
+	function sendPOAToRecipient(receiver, response) {
+		const senderPrivateKey = config.Ethereum[config.environment].privateKey;
+		const privateKey = new Buffer(senderPrivateKey, 'hex');
+		if (!web3.isAddress(receiver)) return generateErrorResponse(response, {
 			code: 500,
 			title: "Error",
 			message: "invalid address"
 		});
 
-		const gasPrice = web3.utils.toWei('1', 'gwei');
-		//let gasPriceHex = web3.utils.toHex(gasPrice);
-		let gasLimitHex = web3.utils.toHex(config.Ethereum.gasLimit);
-		const account_address = config.Ethereum[config.environment].account;
-		//let account = web3.eth.accounts.privateKeyToAccount(senderPrivateKey);
-		let nonce = await web3.eth.getTransactionCount(account_address);
-		let nonceHex = web3.utils.toHex(nonce);
-		let ethToSend = web3.utils.toHex(web3.utils.toWei(config.Ethereum.EtherToTransfer, "ether"));
-		let chainId = web3.utils.toHex(131102);
+		const account = config.Ethereum[config.environment].account;
+		const gasPrice = web3.eth.gasPrice;
+		const gasPriceHex = web3.toHex(gasPrice);
+		const gasLimitHex = web3.toHex(config.Ethereum.gasLimit);
+		const nonce = web3.eth.getTransactionCount(account, 'pending');
+		const nonceHex = web3.toHex(nonce);
+		const ethToSend = web3.toHex(web3.toWei(config.Ethereum.EtherToTransfer, "ether"));
+		const chainId = web3.toHex(131102);
+		const rawTx = {
+			from: account,
+			to: receiver,
+			value: ethToSend,
+			data: '0x',
+			gasLimit: gasLimitHex,
+			gasPrice: gasPriceHex,
+			nonce: nonceHex,
+			chainId: chainId
+		};
+		console.log("rawTx", rawTx);
+		const tx = new Tx(rawTx);
+		tx.sign(privateKey);
+		const serializedTx = tx.serialize();
+		web3.eth.sendRawTransaction("0x" + serializedTx.toString('hex'), (err, txHash) => {
+			if (err) {
+				console.log("sendRawTransaction", err);
+				return generateErrorResponse(response, err);
+			}
+			console.log("txHash: ", txHash);
+			// Wait for the transaction to be mined
+			waitForTransactionReceipt(txHash, response);
 
-		web3.eth.getGasPrice(function (e, r) {
-			let gasPriceHex = web3.utils.toHex(r);
-			const rawTx = {
-				nonce: nonceHex,
-				gasPrice: gasPriceHex,
-				gasLimit: gasLimitHex,
-				from: account_address,
-				to: receiver,
-				value: ethToSend,
-				data: '0x00',
-				chainId: chainId
-			};
-			//console.log(r);
-			let tx = new EthereumTx(rawTx);
-			tx.sign(privateKeyHex);
-
-			let serializedTx = tx.serialize();
-
-			let txHash;
-			web3.eth.sendSignedTransaction("0x" + serializedTx.toString('hex'))
-				.on('transactionHash', (_txHash) => {
-					txHash = _txHash;
-				})
-				.on('receipt', (receipt) => {
-					console.log(receipt);
-					if (receipt.status == '0x1') {
-						return sendRawTransactionResponse(txHash, response);
-					} else {
-						let err = {
-							code: 500,
-							message: 'Transaction is mined, but status is false'
-						};
-						return generateErrorResponse(response, err);
-					}
-				})
-				.on('error', (err) => {
-					return generateErrorResponse(response, err);
-				});
 		});
+	}
+
+	function waitForTransactionReceipt(txHash, response) {
+		cntCheck++;
+		console.log('waiting for TX to be mined :', cntCheck, "s.");
+		const receipt = web3.eth.getTransactionReceipt(txHash);
+		// If no receipt, try again in 1s
+		if (receipt == null) {
+			if (cntCheck < 50) {
+				setTimeout(() => {
+					waitForTransactionReceipt(txHash, response);
+				}, 1000);
+			} else {
+				var err = {
+					code: 500,
+					message: 'waited 50 seconds. but transaction is not mined'
+				};
+				return generateErrorResponse(response, err);
+			}
+		} else {
+			// The transaction was mined
+			if (receipt && receipt.status == '0x1') {
+				console.log('receipt: ', receipt);
+				return sendRawTransactionResponse(txHash, response);
+			} else {
+				var err = {
+					code: 500,
+					message: 'Transaction is mined, but status is false'
+				};
+				return generateErrorResponse(response, err);
+			}
+		}
 	}
 
 	function sendRawTransactionResponse(txHash, response) {
@@ -135,4 +137,4 @@ module.exports = function (app) {
 			success: successResponse
 		});
 	}
-}
+};

@@ -26,7 +26,7 @@ $(function () {
 			$("#receiver").val('');
 			loader.addClass("hidden");
 			swal("Success",
-				`5 ESN is successfully transfered to <BR/>
+				`100 ESN is successfully transfered to <BR/>
 				${receiver}
 				<BR/>
 				txid: <a href="https://test.ethersocial.net/tx/${data.success.txHash}" target="blank">${data.success.txHash}</a>`,

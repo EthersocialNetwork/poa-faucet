@@ -16,4 +16,4 @@ module.exports = function (app) {
 			reject({code: 500, title: "Error", message: "check RPC"});
 		});
 	}
-}
+};
